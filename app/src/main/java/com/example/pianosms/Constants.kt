@@ -5,4 +5,5 @@ object Constants {
     const val KEY_BALE_TOKEN = "bale_bot_token"
     const val KEY_BALE_CHAT_ID = "bale_chat_id"
     const val KEY_AUTO_FORWARD = "auto_forward_sms"
+    const val KEY_FORWARD_CONSENT = "auto_forward_consent_given"
 }
