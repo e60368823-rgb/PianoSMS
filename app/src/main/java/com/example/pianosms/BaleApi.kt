@@ -8,26 +8,33 @@ import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 object BaleApi {
-    private val client = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS).build()
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(20, TimeUnit.SECONDS)
+        .writeTimeout(20, TimeUnit.SECONDS)
+        .build()
     private val jsonType = "application/json; charset=utf-8".toMediaType()
 
-    fun sendMessage(text: String, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
-        if (Constants.BALE_BOT_TOKEN.startsWith("YOUR_") || Constants.BALE_CHAT_ID.startsWith("YOUR_")) {
-            onResult(false, "توکن یا شناسه چت تنظیم نشده")
+    fun sendMessage(token: String, chatId: String, text: String, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
+        if (token.isBlank() || chatId.isBlank()) {
+            onResult(false, "اول توکن ربات و شناسه چت را در تنظیمات وارد و ذخیره کن")
             return
         }
-        val payload = JSONObject().put("chat_id", Constants.BALE_CHAT_ID).put("text", text)
+        val payload = JSONObject().put("chat_id", chatId).put("text", text)
             .toString().toRequestBody(jsonType)
         val request = Request.Builder()
-            .url("https://tapi.bale.ai/bot${Constants.BALE_BOT_TOKEN}/sendMessage")
-            .post(payload).build()
+            .url("https://tapi.bale.ai/bot$token/sendMessage")
+            .post(payload)
+            .build()
         client.newCall(request).enqueue(object : okhttp3.Callback {
-            override fun onFailure(call: okhttp3.Call, e: java.io.IOException) { onResult(false, e.message) }
+            override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+                onResult(false, e.message ?: "خطای شبکه")
+            }
             override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
-                val msg = response.body?.string()
+                val body = response.body?.string()
                 val ok = response.isSuccessful
                 response.close()
-                onResult(ok, if (ok) null else msg)
+                onResult(ok, if (ok) null else body ?: "پاسخ ناموفق از بله")
             }
         })
     }
