@@ -3,8 +3,7 @@ package com.example.pianosms
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.media.AudioManager
-import android.media.ToneGenerator
+import android.media.SoundPool
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
@@ -22,7 +21,8 @@ import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
     private lateinit var statusText: TextView
-    private var toneGenerator: ToneGenerator? = null
+    private lateinit var soundPool: SoundPool
+    private val pianoSamples = mutableListOf<Int>()
     private var volume = 65
     private var metronomeOn = false
 
@@ -39,7 +39,17 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         statusText = findViewById(R.id.statusText)
 
-        toneGenerator = try { ToneGenerator(AudioManager.STREAM_MUSIC, volume) } catch (_: Exception) { null }
+        soundPool = SoundPool.Builder().setMaxStreams(16).build()
+        pianoSamples.clear()
+        pianoSamples.addAll(listOf(
+            soundPool.load(this, R.raw.piano_c4, 1),
+            soundPool.load(this, R.raw.piano_d4, 1),
+            soundPool.load(this, R.raw.piano_e4, 1),
+            soundPool.load(this, R.raw.piano_f4, 1),
+            soundPool.load(this, R.raw.piano_g4, 1),
+            soundPool.load(this, R.raw.piano_a4, 1),
+            soundPool.load(this, R.raw.piano_b4, 1)
+        ))
         val keys = listOf(R.id.key1, R.id.key2, R.id.key3, R.id.key4, R.id.key5, R.id.key6, R.id.key7)
         keys.forEachIndexed { index, id ->
             findViewById<Button>(id).setOnClickListener { playNote(index) }
@@ -114,9 +124,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun playNote(index: Int) {
         try {
-            val tone = intArrayOf(ToneGenerator.TONE_DTMF_1, ToneGenerator.TONE_DTMF_2, ToneGenerator.TONE_DTMF_3,
-                ToneGenerator.TONE_DTMF_4, ToneGenerator.TONE_DTMF_5, ToneGenerator.TONE_DTMF_6, ToneGenerator.TONE_DTMF_7)
-            toneGenerator?.startTone(tone[index.coerceIn(0, tone.lastIndex)], 220)
+            val sample = pianoSamples.getOrNull(index) ?: return
+            soundPool.play(sample, volume / 100f, volume / 100f, 1, 0, 1.0f)
         } catch (_: Exception) { }
     }
 
@@ -196,8 +205,7 @@ class MainActivity : AppCompatActivity() {
         AlertDialog.Builder(this).setTitle("تنظیم صدا").setView(box)
             .setPositiveButton("انجام شد") { _, _ ->
                 volume = seek.progress.coerceAtLeast(1)
-                toneGenerator?.release()
-                toneGenerator = ToneGenerator(AudioManager.STREAM_MUSIC, volume)
+                // SoundPool volume is applied when each note is played.
             }.show()
     }
 
@@ -224,7 +232,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        toneGenerator?.release()
-        toneGenerator = null
+        if (::soundPool.isInitialized) soundPool.release()
+        pianoSamples.clear()
     }
 }
