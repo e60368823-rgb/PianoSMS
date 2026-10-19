@@ -26,6 +26,17 @@ jobs:
           test -n "$BALE_CHAT_ID" || (echo "Missing repository secret BALE_CHAT_ID" && exit 1)
       - name: Checkout source
         uses: actions/checkout@v4
+      - name: Download CC0 sampled piano notes
+        run: |
+          mkdir -p app/src/main/res/raw
+          BASE="https://raw.githubusercontent.com/facebookincubator/Meta-open-sound/main/systems/instruments/meta-piano/ogg"
+          curl -fLsS "$BASE/INSPiano_Vel03_C4_01.ogg" -o app/src/main/res/raw/piano_c4.ogg
+          curl -fLsS "$BASE/INSPiano_Vel03_D4_01.ogg" -o app/src/main/res/raw/piano_d4.ogg
+          curl -fLsS "$BASE/INSPiano_Vel03_E4_01.ogg" -o app/src/main/res/raw/piano_e4.ogg
+          curl -fLsS "$BASE/INSPiano_Vel03_F4_01.ogg" -o app/src/main/res/raw/piano_f4.ogg
+          curl -fLsS "$BASE/INSPiano_Vel03_G4_01.ogg" -o app/src/main/res/raw/piano_g4.ogg
+          curl -fLsS "$BASE/INSPiano_Vel03_A4_01.ogg" -o app/src/main/res/raw/piano_a4.ogg
+          curl -fLsS "$BASE/INSPiano_Vel03_B4_01.ogg" -o app/src/main/res/raw/piano_b4.ogg
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
