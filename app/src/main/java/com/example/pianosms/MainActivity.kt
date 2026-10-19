@@ -94,9 +94,6 @@ class MainActivity : AppCompatActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED) {
             missing.add(Manifest.permission.RECEIVE_SMS)
         }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
-            missing.add(Manifest.permission.READ_CONTACTS)
-        }
         if (missing.isNotEmpty()) {
             AlertDialog.Builder(this)
                 .setTitle("مجوزهای لازم")
