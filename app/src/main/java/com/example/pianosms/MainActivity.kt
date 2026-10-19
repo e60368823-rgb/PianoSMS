@@ -130,30 +130,44 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSettings() {
-        if (prefs.getBoolean(Constants.KEY_AUTO_FORWARD, false)) {
-            AlertDialog.Builder(this)
-                .setTitle("اتصال بله")
-                .setMessage("اتصال این نسخه از قبل در زمان ساخت برنامه تنظیم می‌شود. ارسال خودکار پیامک‌ها اکنون روشن است.")
-                .setNegativeButton("بستن", null)
-                .setPositiveButton("خاموش‌کردن ارسال") { _, _ ->
-                    prefs.edit().putBoolean(Constants.KEY_AUTO_FORWARD, false).apply()
-                    statusText.text = "ارسال خودکار خاموش شد"
-                }.show()
-            return
+        val tokenInput = EditText(this).apply {
+            hint = "توکن ربات بله"
+            setSingleLine(true)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setText(prefs.getString(Constants.KEY_BALE_TOKEN, "").orEmpty())
+        }
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 12, 40, 4)
+            addView(TextView(this@MainActivity).apply { text = "توکن بات"; textSize = 14f })
+            addView(tokenInput)
         }
         AlertDialog.Builder(this)
             .setTitle("اتصال بله")
-            .setMessage(
-                if (BaleApi.isConfigured())
-                    "اتصال بله از قبل تنظیم شده است. با فعال‌سازی، متن پیامک‌های جدید این گوشی به چت ازپیش‌تنظیم‌شده فرستاده می‌شود."
-                else
-                    "این نسخه هنوز با اطلاعات امن بات ساخته نشده است؛ تا پیکربندی اتصال، ارسال پیامک فعال نمی‌شود."
-            )
+            .setView(content)
             .setNegativeButton("لغو", null)
-            .setPositiveButton("فعال‌سازی") { _, _ -> enableForwarding() }
+            .setNeutralButton("تست اتصال") { _, _ ->
+                val token = tokenInput.text.toString().trim()
+                if (token.isBlank()) {
+                    Toast.makeText(this, "توکن بات را وارد کن", Toast.LENGTH_LONG).show()
+                } else {
+                    prefs.edit().putString(Constants.KEY_BALE_TOKEN, token).apply()
+                    testBaleConnection()
+                }
+            }
+            .setPositiveButton("ذخیره") { _, _ ->
+                val token = tokenInput.text.toString().trim()
+                if (token.isBlank()) {
+                    prefs.edit().remove(Constants.KEY_BALE_TOKEN).putBoolean(Constants.KEY_AUTO_FORWARD, false).apply()
+                    statusText.text = "توکن ذخیره نشده"
+                } else {
+                    prefs.edit().putString(Constants.KEY_BALE_TOKEN, token).apply()
+                    statusText.text = "توکن بله ذخیره شد"
+                    Toast.makeText(this, "توکن روی همین گوشی ذخیره شد", Toast.LENGTH_SHORT).show()
+                }
+            }
             .show()
     }
-
     private fun toggleForwarding() {
         if (prefs.getBoolean(Constants.KEY_AUTO_FORWARD, false)) {
             prefs.edit().putBoolean(Constants.KEY_AUTO_FORWARD, false).apply()
@@ -224,7 +238,7 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == REQUEST_SMS_PERMISSION) {
             val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
             if (granted) {
-                statusText.text = "مجوز دریافت شد؛ تنظیمات بله را باز کن"
+                statusText.text = "مجوز دریافت شد"
                 maybeEnableForwardingAfterPermission()
             } else statusText.text = "مجوز داده نشد؛ ارسال خودکار خاموش است"
         }
