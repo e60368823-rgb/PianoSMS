@@ -31,12 +31,12 @@
 
         <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:background="#34353B" android:padding="4dp">
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="SETTING" android:textColor="#E7C94C" android:textSize="10sp" android:gravity="center"/>
-            <Button android:id="@+id/settingsButton2" style="@style/ConsoleButton" android:layout_width="match_parent" android:layout_height="32dp" android:text="SETTINGS" android:onClick="unused"/>
-            <Button android:id="@+id/powerButton2" style="@style/ConsoleButton" android:layout_width="match_parent" android:layout_height="32dp" android:text="START / STOP" android:onClick="unused"/>
+            <Button android:id="@+id/settingsButton2" style="@style/ConsoleButton" android:layout_width="match_parent" android:layout_height="32dp" android:text="SETTINGS"/>
+            <Button android:id="@+id/powerButton2" style="@style/ConsoleButton" android:layout_width="match_parent" android:layout_height="32dp" android:text="START / STOP"/>
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="KEYBOARD SET" android:textColor="#E7C94C" android:textSize="10sp" android:gravity="center" android:layout_marginTop="4dp"/>
-            <Button style="@style/ConsoleButton" android:layout_width="match_parent" android:layout_height="32dp" android:text="STYLE SELECT" android:onClick="unused"/>
-            <Button style="@style/ConsoleButton" android:layout_width="match_parent" android:layout_height="32dp" android:text="CHORD / MIX" android:onClick="unused"/>
-            <Button style="@style/ConsoleButton" android:layout_width="match_parent" android:layout_height="32dp" android:text="MY SETTING" android:onClick="unused"/>
+            <Button android:id="@+id/styleButton" style="@style/ConsoleButton" android:layout_width="match_parent" android:layout_height="32dp" android:text="STYLE SELECT"/>
+            <Button android:id="@+id/chordButton" style="@style/ConsoleButton" android:layout_width="match_parent" android:layout_height="32dp" android:text="CHORD / MIX"/>
+            <Button android:id="@+id/mySettingButton" style="@style/ConsoleButton" android:layout_width="match_parent" android:layout_height="32dp" android:text="MY SETTING"/>
         </LinearLayout>
     </LinearLayout>
 
