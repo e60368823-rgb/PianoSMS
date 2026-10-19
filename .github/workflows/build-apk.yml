@@ -5,6 +5,10 @@ on:
   push:
     branches: [ main, master ]
 
+concurrency:
+  group: piano-sms-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   actions: read
