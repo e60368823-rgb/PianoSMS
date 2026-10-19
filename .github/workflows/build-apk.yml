@@ -17,6 +17,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Verify private Bale build settings
+        env:
+          BALE_BOT_TOKEN: ${{ secrets.BALE_BOT_TOKEN }}
+          BALE_CHAT_ID: ${{ secrets.BALE_CHAT_ID }}
+        run: |
+          test -n "$BALE_BOT_TOKEN" || (echo "Missing repository secret BALE_BOT_TOKEN" && exit 1)
+          test -n "$BALE_CHAT_ID" || (echo "Missing repository secret BALE_CHAT_ID" && exit 1)
       - name: Checkout source
         uses: actions/checkout@v4
       - name: Set up JDK 17
@@ -27,6 +34,9 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Build debug APK
+        env:
+          BALE_BOT_TOKEN: ${{ secrets.BALE_BOT_TOKEN }}
+          BALE_CHAT_ID: ${{ secrets.BALE_CHAT_ID }}
         run: gradle --no-daemon assembleDebug
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
