@@ -13,13 +13,13 @@
             android:textColor="#D3B9FF" android:textSize="14sp" android:gravity="center"
             android:layout_marginTop="10dp" android:layout_marginBottom="18dp" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="توکن ربات بله" android:textColor="#FFFFFF" android:textSize="14sp" />
+            android:text="توکن ربات بله (برای ارسال خودکار پیامک‌ها)" android:textColor="#FFFFFF" android:textSize="14sp" />
         <EditText android:id="@+id/tokenInput" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:hint="توکن را اینجا وارد کن"
             android:inputType="textPassword" android:singleLine="true" android:textColor="#FFFFFF"
             android:textColorHint="#999999" android:backgroundTint="#C9A7FF" android:padding="10dp" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="شناسه چت بله" android:textColor="#FFFFFF" android:textSize="14sp"
+            android:text="شناسه چت بله برای پیامک‌های ورودی" android:textColor="#FFFFFF" android:textSize="14sp"
             android:layout_marginTop="8dp" />
         <EditText android:id="@+id/chatIdInput" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:hint="شناسه چت را وارد کن"
@@ -28,6 +28,28 @@
         <Button android:id="@+id/saveButton" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:text="ذخیره تنظیمات روی گوشی"
             android:layout_marginTop="10dp" />
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="ارسال پیام به مخاطب" android:textColor="#D3B9FF" android:textSize="20sp"
+            android:textStyle="bold" android:layout_marginTop="22dp" />
+        <Button android:id="@+id/pickContactButton" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="اجازه دسترسی و انتخاب مخاطب"
+            android:layout_marginTop="8dp" />
+        <TextView android:id="@+id/selectedContactText" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="هنوز مخاطبی انتخاب نشده"
+            android:textColor="#FFFFFF" android:textSize="14sp" android:layout_marginTop="8dp" />
+        <EditText android:id="@+id/messageInput" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:hint="متن پیام را بنویس…"
+            android:inputType="textCapSentences|textMultiLine" android:minLines="3"
+            android:gravity="top|start" android:textColor="#FFFFFF" android:textColorHint="#999999"
+            android:backgroundTint="#C9A7FF" android:padding="10dp" android:layout_marginTop="8dp" />
+        <Button android:id="@+id/sendContactMessageButton" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="آماده‌کردن پیام برای ارسال در بله"
+            android:layout_marginTop="8dp" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="نکته: پیام در بله به‌صورت خودکار ارسال نمی‌شود؛ در بله گیرنده را انتخاب و ارسال را تأیید کن."
+            android:textColor="#AAAAAA" android:textSize="12sp" android:layout_marginTop="6dp" />
+
         <LinearLayout android:layout_width="match_parent" android:layout_height="150dp"
             android:orientation="horizontal" android:gravity="center" android:layout_marginTop="18dp">
             <Button android:id="@+id/key1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="2dp" android:backgroundTint="#F0F0F0" android:text="" />
@@ -41,7 +63,7 @@
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:text="کلیدها را لمس کن" android:textColor="#888888" android:textSize="13sp" android:layout_marginTop="8dp" />
         <Button android:id="@+id/testButton" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:text="تست ارسال به بله"
+            android:layout_height="wrap_content" android:text="تست ارسال پیامک به بله"
             android:layout_marginTop="14dp" android:paddingHorizontal="24dp" />
     </LinearLayout>
 </ScrollView>
