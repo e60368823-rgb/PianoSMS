@@ -18,19 +18,22 @@ object BaleApi {
 
     private val jsonType = "application/json; charset=utf-8".toMediaType()
 
-    fun isConfigured(): Boolean =
-        BuildConfig.BALE_BOT_TOKEN.isNotBlank() && BuildConfig.BALE_CHAT_ID.isNotBlank()
+    fun isConfigured(context: Context): Boolean =
+        context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(Constants.KEY_BALE_TOKEN, "").orEmpty().isNotBlank() &&
+            Constants.DEFAULT_BALE_CHAT_ID.isNotBlank()
 
     fun sendMessage(
         context: Context,
         text: String,
         onResult: (Boolean, String?) -> Unit = { _, _ -> }
     ) {
-        val token = BuildConfig.BALE_BOT_TOKEN.trim()
-        val chatId = BuildConfig.BALE_CHAT_ID.trim()
+        val prefs = context.applicationContext.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
+        val token = prefs.getString(Constants.KEY_BALE_TOKEN, "").orEmpty().trim()
+        val chatId = Constants.DEFAULT_BALE_CHAT_ID
 
         if (token.isBlank() || chatId.isBlank()) {
-            onResult(false, "اتصال این نسخه هنوز در تنظیمات امن ساخت برنامه پیکربندی نشده است")
+            onResult(false, "اول توکن ربات بله را در تنظیمات وارد کن")
             return
         }
 
