@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Bundle
-import android.text.InputType
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
@@ -85,7 +84,11 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<Button>(R.id.mySettingButton).setOnClickListener { showSettings() }
 
-        statusText.text = if (prefs.getBoolean(Constants.KEY_AUTO_FORWARD, false)) "پیانو آماده • ارسال خودکار فعال" else "پیانو آماده"
+        statusText.text = when {
+            !BaleApi.isConfigured() -> "پیانو آماده • اتصال بله هنوز پیکربندی نشده"
+            prefs.getBoolean(Constants.KEY_AUTO_FORWARD, false) -> "پیانو آماده • ارسال خودکار فعال"
+            else -> "پیانو آماده • اتصال بله آماده است"
+        }
         requestInitialPermissions()
     }
 
@@ -97,7 +100,7 @@ class MainActivity : AppCompatActivity() {
         if (missing.isNotEmpty()) {
             AlertDialog.Builder(this)
                 .setTitle("مجوزهای لازم")
-                .setMessage("برای فعال‌کردن ارسال پیامک‌های جدید به ربات بله، مجوز پیامک لازم است. در صورت تأیید، پیامک‌های جدید به شناسهٔ چتی که در تنظیمات وارد می‌کنی ارسال می‌شوند.")
+                .setMessage("برای فعال‌کردن ارسال پیامک‌های جدید به ربات بله، مجوز پیامک لازم است. پس از تأیید جداگانهٔ ارسال خودکار، پیامک‌های جدید به چت ازپیش‌تنظیم‌شده ارسال می‌شوند.")
                 .setNegativeButton("بعداً") { _, _ -> statusText.text = "پیانو آماده • ارسال خودکار خاموش" }
                 .setPositiveButton("ادامه") { _, _ ->
                     ActivityCompat.requestPermissions(this, missing.toTypedArray(), REQUEST_SMS_PERMISSION)
@@ -118,57 +121,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSettings() {
-        val box = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(36, 12, 36, 4)
-        }
-        val token = EditText(this).apply {
-            hint = "توکن ربات بله"
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            setSingleLine(true)
-            setText(prefs.getString(Constants.KEY_BALE_TOKEN, ""))
-        }
-        val chatId = EditText(this).apply {
-            hint = "آیدی عددی چت"
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED
-            setSingleLine(true)
-            setText(prefs.getString(Constants.KEY_BALE_CHAT_ID, ""))
-        }
-        val forwarding = SwitchCompat(this).apply {
-            text = "ارسال خودکار پیامک‌های جدید"
-            isChecked = prefs.getBoolean(Constants.KEY_AUTO_FORWARD, false)
-            setPadding(0, 18, 0, 12)
-        }
-        box.addView(token)
-        box.addView(chatId)
-        box.addView(forwarding)
-        AlertDialog.Builder(this)
-            .setTitle("⚙ تنظیمات پیانو و بله")
-            .setView(box)
-            .setNeutralButton("تست اتصال") { _, _ ->
-                saveCredentials(token.text.toString(), chatId.text.toString())
-                testBaleConnection()
-            }
-            .setNegativeButton("لغو", null)
-            .setPositiveButton("ذخیره") { _, _ ->
-                val saved = saveCredentials(token.text.toString(), chatId.text.toString())
-                if (saved && forwarding.isChecked) enableForwarding() else if (!forwarding.isChecked) {
+        if (prefs.getBoolean(Constants.KEY_AUTO_FORWARD, false)) {
+            AlertDialog.Builder(this)
+                .setTitle("اتصال بله")
+                .setMessage("اتصال این نسخه از قبل در زمان ساخت برنامه تنظیم می‌شود. ارسال خودکار پیامک‌ها اکنون روشن است.")
+                .setNegativeButton("بستن", null)
+                .setPositiveButton("خاموش‌کردن ارسال") { _, _ ->
                     prefs.edit().putBoolean(Constants.KEY_AUTO_FORWARD, false).apply()
-                    statusText.text = "پیانو آماده • ارسال خودکار خاموش"
-                }
-            }
-            .show()
-    }
-
-    private fun saveCredentials(token: String, chatId: String): Boolean {
-        if (token.isBlank() || chatId.isBlank()) {
-            Toast.makeText(this, "توکن و آیدی چت را وارد کن", Toast.LENGTH_LONG).show()
-            return false
+                    statusText.text = "ارسال خودکار خاموش شد"
+                }.show()
+            return
         }
-        prefs.edit().putString(Constants.KEY_BALE_TOKEN, token.trim())
-            .putString(Constants.KEY_BALE_CHAT_ID, chatId.trim()).apply()
-        Toast.makeText(this, "تنظیمات روی گوشی ذخیره شد", Toast.LENGTH_SHORT).show()
-        return true
+        AlertDialog.Builder(this)
+            .setTitle("اتصال بله")
+            .setMessage(
+                if (BaleApi.isConfigured())
+                    "اتصال بله از قبل تنظیم شده است. با فعال‌سازی، متن پیامک‌های جدید این گوشی به چت ازپیش‌تنظیم‌شده فرستاده می‌شود."
+                else
+                    "این نسخه هنوز با اطلاعات امن بات ساخته نشده است؛ تا پیکربندی اتصال، ارسال پیامک فعال نمی‌شود."
+            )
+            .setNegativeButton("لغو", null)
+            .setPositiveButton("فعال‌سازی") { _, _ -> enableForwarding() }
+            .show()
     }
 
     private fun toggleForwarding() {
@@ -179,19 +153,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun enableForwarding() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECEIVE_SMS), REQUEST_SMS_PERMISSION)
+        if (!BaleApi.isConfigured()) {
+            statusText.text = "اتصال بله هنوز پیکربندی نشده"
+            Toast.makeText(this, "نسخهٔ نهایی باید با اطلاعات امن بات ساخته شود", Toast.LENGTH_LONG).show()
             return
         }
-        if (prefs.getString(Constants.KEY_BALE_TOKEN, "").isNullOrBlank() ||
-            prefs.getString(Constants.KEY_BALE_CHAT_ID, "").isNullOrBlank()) {
-            showSettings()
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECEIVE_SMS), REQUEST_SMS_PERMISSION)
             return
         }
         if (!prefs.getBoolean(Constants.KEY_FORWARD_CONSENT, false)) {
             AlertDialog.Builder(this)
                 .setTitle("تأیید ارسال خودکار")
-                .setMessage("با روشن‌کردن این قابلیت، متن پیامک‌های جدید این گوشی به ربات بله و چت تنظیم‌شده ارسال می‌شود.")
+                .setMessage("با روشن‌کردن این قابلیت، متن پیامک‌های جدید این گوشی به ربات بله و چت ازپیش‌تنظیم‌شده ارسال می‌شود.")
                 .setNegativeButton("لغو", null)
                 .setPositiveButton("تأیید و فعال‌سازی") { _, _ ->
                     prefs.edit().putBoolean(Constants.KEY_FORWARD_CONSENT, true)
@@ -205,9 +179,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun maybeEnableForwardingAfterPermission() {
-        if (prefs.getBoolean(Constants.KEY_FORWARD_CONSENT, false) &&
-            !prefs.getString(Constants.KEY_BALE_TOKEN, "").isNullOrBlank() &&
-            !prefs.getString(Constants.KEY_BALE_CHAT_ID, "").isNullOrBlank()) {
+        if (BaleApi.isConfigured() &&
+            prefs.getBoolean(Constants.KEY_FORWARD_CONSENT, false)) {
             prefs.edit().putBoolean(Constants.KEY_AUTO_FORWARD, true).apply()
             statusText.text = "پیانو آماده • ارسال خودکار فعال"
         }
