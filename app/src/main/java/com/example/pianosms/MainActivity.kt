@@ -59,8 +59,10 @@ class MainActivity : AppCompatActivity() {
                 statusText.text = "اول توکن و شناسه چت را وارد کن"
                 return@setOnClickListener
             }
+            prefs.edit().putString(Constants.KEY_BALE_TOKEN, token)
+                .putString(Constants.KEY_BALE_CHAT_ID, chatId).apply()
             statusText.text = "در حال ارسال پیام تست…"
-            BaleApi.sendMessage(token, chatId, "🎹 تست اتصال Piano SMS") { ok, error -> runOnUiThread {
+            BaleApi.sendMessage(this, "🎹 تست اتصال Piano SMS") { ok, error -> runOnUiThread {
                 statusText.text = if (ok) "✅ تست ارسال موفق بود" else "❌ تست ناموفق: ${error ?: "خطای نامشخص"}"
                 Toast.makeText(this, statusText.text, Toast.LENGTH_LONG).show()
             } }
