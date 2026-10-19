@@ -66,6 +66,24 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.modeButton).setOnClickListener {
             statusText.text = "حالت پیانو"
         }
+        findViewById<Button>(R.id.settingsButton2).setOnClickListener { showSettings() }
+        findViewById<Button>(R.id.powerButton2).setOnClickListener {
+            if (prefs.getBoolean(Constants.KEY_AUTO_FORWARD, false)) {
+                prefs.edit().putBoolean(Constants.KEY_AUTO_FORWARD, false).apply()
+                statusText.text = "ارسال خودکار خاموش شد"
+            } else {
+                showSettings()
+            }
+        }
+        findViewById<Button>(R.id.styleButton).setOnClickListener {
+            statusText.text = "صدای پیش‌فرض پیانو انتخاب شد"
+            playNote(2)
+        }
+        findViewById<Button>(R.id.chordButton).setOnClickListener {
+            playNote(0); playNote(2); playNote(4)
+            statusText.text = "آکورد آزمایشی"
+        }
+        findViewById<Button>(R.id.mySettingButton).setOnClickListener { showSettings() }
 
         statusText.text = if (prefs.getBoolean(Constants.KEY_AUTO_FORWARD, false)) "پیانو آماده • ارسال خودکار فعال" else "پیانو آماده"
         requestInitialPermissions()
