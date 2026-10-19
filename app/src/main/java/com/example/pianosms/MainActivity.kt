@@ -98,12 +98,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        if (hasSmsPermission()) {
-            statusText.text = if (autoForwardSwitch.isChecked) "آماده • ارسال خودکار فعال است" else "آماده • ارسال خودکار خاموش است"
-        } else {
-            statusText.text = "برای ارسال خودکار پیامک، مجوز پیامک لازم است"
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECEIVE_SMS), REQUEST_SMS_PERMISSION)
-        }
+        statusText.text = "آماده"
+        // Ask for SMS permission only when the user explicitly enables the feature.
     }
 
     private fun hasSmsPermission(): Boolean =
