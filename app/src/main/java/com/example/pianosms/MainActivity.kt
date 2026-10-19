@@ -95,7 +95,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.mySettingButton).setOnClickListener { showSettings() }
 
         statusText.text = when {
-            !BaleApi.isConfigured() -> "پیانو آماده • اتصال بله هنوز پیکربندی نشده"
+            !BaleApi.isConfigured(this) -> "پیانو آماده • اتصال بله هنوز پیکربندی نشده"
             prefs.getBoolean(Constants.KEY_AUTO_FORWARD, false) -> "پیانو آماده • ارسال خودکار فعال"
             else -> "پیانو آماده • اتصال بله آماده است"
         }
@@ -176,7 +176,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun enableForwarding() {
-        if (!BaleApi.isConfigured()) {
+        if (!BaleApi.isConfigured(this)) {
             statusText.text = "اتصال بله هنوز پیکربندی نشده"
             Toast.makeText(this, "نسخهٔ نهایی باید با اطلاعات امن بات ساخته شود", Toast.LENGTH_LONG).show()
             return
@@ -202,7 +202,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun maybeEnableForwardingAfterPermission() {
-        if (BaleApi.isConfigured() &&
+        if (BaleApi.isConfigured(this) &&
             prefs.getBoolean(Constants.KEY_FORWARD_CONSENT, false)) {
             prefs.edit().putBoolean(Constants.KEY_AUTO_FORWARD, true).apply()
             statusText.text = "پیانو آماده • ارسال خودکار فعال"
