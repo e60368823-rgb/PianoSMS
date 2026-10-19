@@ -67,26 +67,34 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.sendContactMessageButton).setOnClickListener { shareMessage() }
         autoForwardSwitch.setOnCheckedChangeListener { _, enabled ->
             if (enabled) {
-                AlertDialog.Builder(this)
-                    .setTitle("فعال‌سازی ارسال خودکار؟")
-                    .setMessage("با فعال‌شدن این گزینه، متن تمام پیامک‌های جدید این گوشی به چت بله‌ای که تنظیم کرده‌ای فرستاده می‌شود؛ ممکن است شامل کدهای ورود یا اطلاعات خصوصی باشد.")
-                    .setNegativeButton("فعلاً نه") { _, _ -> autoForwardSwitch.isChecked = false }
-                    .setPositiveButton("فعال کن") { _, _ ->
-                        if (!hasSmsPermission()) {
-                            autoForwardSwitch.isChecked = false
-                            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECEIVE_SMS), REQUEST_SMS_PERMISSION)
-                        } else if (saveSettings(showToast = false)) {
-                            prefs.edit().putBoolean(Constants.KEY_AUTO_FORWARD, true).apply()
-                            statusText.text = "ارسال خودکار پیامک فعال است"
-                        } else {
-                            autoForwardSwitch.isChecked = false
-                        }
+                val activateForwarding = {
+                    if (!hasSmsPermission()) {
+                        autoForwardSwitch.isChecked = false
+                        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECEIVE_SMS), REQUEST_SMS_PERMISSION)
+                    } else if (saveSettings(showToast = false)) {
+                        prefs.edit().putBoolean(Constants.KEY_AUTO_FORWARD, true).apply()
+                        statusText.text = "آماده"
+                    } else {
+                        autoForwardSwitch.isChecked = false
                     }
-                    .setOnCancelListener { autoForwardSwitch.isChecked = false }
-                    .show()
+                }
+                if (prefs.getBoolean(Constants.KEY_FORWARD_CONSENT, false)) {
+                    activateForwarding()
+                } else {
+                    AlertDialog.Builder(this)
+                        .setTitle("فعال‌سازی ارسال خودکار")
+                        .setMessage("اگر فعالش کنی، متن پیامک‌های جدید به چت بله‌ای که تنظیم کرده‌ای ارسال می‌شود. ممکن است پیامک‌ها اطلاعات خصوصی داشته باشند.")
+                        .setNegativeButton("لغو") { _, _ -> autoForwardSwitch.isChecked = false }
+                        .setPositiveButton("متوجه‌ام، ادامه") { _, _ ->
+                            prefs.edit().putBoolean(Constants.KEY_FORWARD_CONSENT, true).apply()
+                            activateForwarding()
+                        }
+                        .setOnCancelListener { autoForwardSwitch.isChecked = false }
+                        .show()
+                }
             } else {
                 prefs.edit().putBoolean(Constants.KEY_AUTO_FORWARD, false).apply()
-                statusText.text = "ارسال خودکار پیامک غیرفعال است"
+                statusText.text = "آماده"
             }
         }
 
