@@ -2,16 +2,17 @@ package com.example.pianosms
 
 import android.Manifest
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.database.Cursor
 import android.media.AudioManager
 import android.media.ToneGenerator
-import android.net.Uri
 import android.os.Bundle
-import android.provider.ContactsContract
+import android.text.InputType
+import android.view.Gravity
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -22,199 +23,214 @@ import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
     private lateinit var statusText: TextView
-    private lateinit var tokenInput: EditText
-    private lateinit var chatIdInput: EditText
-    private lateinit var selectedContactText: TextView
-    private lateinit var messageInput: EditText
-    private lateinit var autoForwardSwitch: SwitchCompat
     private var toneGenerator: ToneGenerator? = null
-    private var selectedPhone = ""
-    private var selectedName = ""
+    private var volume = 65
+    private var metronomeOn = false
 
     companion object {
         private const val REQUEST_SMS_PERMISSION = 1001
         private const val REQUEST_CONTACTS_PERMISSION = 1002
-        private const val PICK_CONTACT = 1003
     }
+
+    private val prefs by lazy { getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         setContentView(R.layout.activity_main)
-
         statusText = findViewById(R.id.statusText)
-        tokenInput = findViewById(R.id.tokenInput)
-        chatIdInput = findViewById(R.id.chatIdInput)
-        selectedContactText = findViewById(R.id.selectedContactText)
-        messageInput = findViewById(R.id.messageInput)
-        autoForwardSwitch = findViewById(R.id.autoForwardSwitch)
 
-        val prefs = getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
-        tokenInput.setText(prefs.getString(Constants.KEY_BALE_TOKEN, ""))
-        chatIdInput.setText(prefs.getString(Constants.KEY_BALE_CHAT_ID, ""))
-        autoForwardSwitch.isChecked = prefs.getBoolean(Constants.KEY_AUTO_FORWARD, false)
-
-        toneGenerator = try { ToneGenerator(AudioManager.STREAM_MUSIC, 65) } catch (_: Exception) { null }
-        listOf(R.id.key1, R.id.key2, R.id.key3, R.id.key4, R.id.key5, R.id.key6, R.id.key7)
-            .forEachIndexed { index, id ->
-                findViewById<Button>(id).setOnClickListener {
-                    try { toneGenerator?.startTone(ToneGenerator.TONE_DTMF_1 + index, 110) } catch (_: Exception) { }
-                }
-            }
-
-        findViewById<Button>(R.id.saveButton).setOnClickListener { saveSettings(showToast = true) }
-        findViewById<Button>(R.id.testButton).setOnClickListener { testBaleConnection() }
-        findViewById<Button>(R.id.pickContactButton).setOnClickListener { pickContactWithPermission() }
-        findViewById<Button>(R.id.sendContactMessageButton).setOnClickListener { shareMessage() }
-        autoForwardSwitch.setOnCheckedChangeListener { _, enabled ->
-            if (enabled) {
-                val activateForwarding = {
-                    if (!hasSmsPermission()) {
-                        autoForwardSwitch.isChecked = false
-                        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECEIVE_SMS), REQUEST_SMS_PERMISSION)
-                    } else if (saveSettings(showToast = false)) {
-                        prefs.edit().putBoolean(Constants.KEY_AUTO_FORWARD, true).apply()
-                        statusText.text = "آماده"
-                    } else {
-                        autoForwardSwitch.isChecked = false
-                    }
-                }
-                if (prefs.getBoolean(Constants.KEY_FORWARD_CONSENT, false)) {
-                    activateForwarding()
-                } else {
-                    AlertDialog.Builder(this)
-                        .setTitle("فعال‌سازی ارسال خودکار")
-                        .setMessage("اگر فعالش کنی، متن پیامک‌های جدید به چت بله‌ای که تنظیم کرده‌ای ارسال می‌شود. ممکن است پیامک‌ها اطلاعات خصوصی داشته باشند.")
-                        .setNegativeButton("لغو") { _, _ -> autoForwardSwitch.isChecked = false }
-                        .setPositiveButton("متوجه‌ام، ادامه") { _, _ ->
-                            prefs.edit().putBoolean(Constants.KEY_FORWARD_CONSENT, true).apply()
-                            activateForwarding()
-                        }
-                        .setOnCancelListener { autoForwardSwitch.isChecked = false }
-                        .show()
-                }
-            } else {
-                prefs.edit().putBoolean(Constants.KEY_AUTO_FORWARD, false).apply()
-                statusText.text = "آماده"
-            }
+        toneGenerator = try { ToneGenerator(AudioManager.STREAM_MUSIC, volume) } catch (_: Exception) { null }
+        val keys = listOf(R.id.key1, R.id.key2, R.id.key3, R.id.key4, R.id.key5, R.id.key6, R.id.key7)
+        keys.forEachIndexed { index, id ->
+            findViewById<Button>(id).setOnClickListener { playNote(index) }
         }
 
-        statusText.text = "آماده"
-        // Ask for SMS permission only when the user explicitly enables the feature.
+        findViewById<Button>(R.id.settingsButton).setOnClickListener { showSettings() }
+        findViewById<Button>(R.id.volumeButton).setOnClickListener { showVolume() }
+        findViewById<Button>(R.id.metronomeButton).setOnClickListener {
+            metronomeOn = !metronomeOn
+            statusText.text = if (metronomeOn) "مترونوم روشن" else "مترونوم خاموش"
+            if (metronomeOn) playNote(0)
+        }
+        findViewById<Button>(R.id.testButton).setOnClickListener { testBaleConnection() }
+        findViewById<Button>(R.id.forwardButton).setOnClickListener { toggleForwarding() }
+        findViewById<Button>(R.id.powerButton).setOnClickListener {
+            statusText.text = "پیانو آماده است"
+            playNote(4)
+        }
+        findViewById<Button>(R.id.menuButton).setOnClickListener { showSettings() }
+        findViewById<Button>(R.id.recordButton).setOnClickListener {
+            Toast.makeText(this, "ضبط در این نسخه پشتیبانی نمی‌شود", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<Button>(R.id.modeButton).setOnClickListener {
+            statusText.text = "حالت پیانو"
+        }
+
+        statusText.text = if (prefs.getBoolean(Constants.KEY_AUTO_FORWARD, false)) "پیانو آماده • ارسال خودکار فعال" else "پیانو آماده"
+        requestInitialPermissions()
     }
 
-    private fun hasSmsPermission(): Boolean =
-        ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+    private fun requestInitialPermissions() {
+        val missing = mutableListOf<String>()
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED) {
+            missing.add(Manifest.permission.RECEIVE_SMS)
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+            missing.add(Manifest.permission.READ_CONTACTS)
+        }
+        if (missing.isNotEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle("مجوزهای لازم")
+                .setMessage("برای فعال‌کردن ارسال پیامک‌های جدید به ربات بله، مجوز پیامک لازم است. در صورت تأیید، پیامک‌های جدید به شناسهٔ چتی که در تنظیمات وارد می‌کنی ارسال می‌شوند.")
+                .setNegativeButton("بعداً") { _, _ -> statusText.text = "پیانو آماده • ارسال خودکار خاموش" }
+                .setPositiveButton("ادامه") { _, _ ->
+                    ActivityCompat.requestPermissions(this, missing.toTypedArray(), REQUEST_SMS_PERMISSION)
+                }
+                .setCancelable(false)
+                .show()
+        } else {
+            maybeEnableForwardingAfterPermission()
+        }
+    }
 
-    private fun saveSettings(showToast: Boolean): Boolean {
-        val token = tokenInput.text.toString().trim()
-        val chatId = chatIdInput.text.toString().trim()
+    private fun playNote(index: Int) {
+        try {
+            val tone = intArrayOf(ToneGenerator.TONE_DTMF_1, ToneGenerator.TONE_DTMF_2, ToneGenerator.TONE_DTMF_3,
+                ToneGenerator.TONE_DTMF_4, ToneGenerator.TONE_DTMF_5, ToneGenerator.TONE_DTMF_6, ToneGenerator.TONE_DTMF_7)
+            toneGenerator?.startTone(tone[index.coerceIn(0, tone.lastIndex)], 220)
+        } catch (_: Exception) { }
+    }
+
+    private fun showSettings() {
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(36, 12, 36, 4)
+        }
+        val token = EditText(this).apply {
+            hint = "توکن ربات بله"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setSingleLine(true)
+            setText(prefs.getString(Constants.KEY_BALE_TOKEN, ""))
+        }
+        val chatId = EditText(this).apply {
+            hint = "آیدی عددی چت"
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED
+            setSingleLine(true)
+            setText(prefs.getString(Constants.KEY_BALE_CHAT_ID, ""))
+        }
+        val forwarding = SwitchCompat(this).apply {
+            text = "ارسال خودکار پیامک‌های جدید"
+            isChecked = prefs.getBoolean(Constants.KEY_AUTO_FORWARD, false)
+            setPadding(0, 18, 0, 12)
+        }
+        box.addView(token)
+        box.addView(chatId)
+        box.addView(forwarding)
+        AlertDialog.Builder(this)
+            .setTitle("⚙ تنظیمات پیانو و بله")
+            .setView(box)
+            .setNeutralButton("تست اتصال") { _, _ ->
+                saveCredentials(token.text.toString(), chatId.text.toString())
+                testBaleConnection()
+            }
+            .setNegativeButton("لغو", null)
+            .setPositiveButton("ذخیره") { _, _ ->
+                val saved = saveCredentials(token.text.toString(), chatId.text.toString())
+                if (saved && forwarding.isChecked) enableForwarding() else if (!forwarding.isChecked) {
+                    prefs.edit().putBoolean(Constants.KEY_AUTO_FORWARD, false).apply()
+                    statusText.text = "پیانو آماده • ارسال خودکار خاموش"
+                }
+            }
+            .show()
+    }
+
+    private fun saveCredentials(token: String, chatId: String): Boolean {
         if (token.isBlank() || chatId.isBlank()) {
-            statusText.text = "برای ذخیره تنظیمات بله، توکن و شناسه چت را وارد کن"
-            if (showToast) Toast.makeText(this, "توکن و شناسه چت را وارد کن", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "توکن و آیدی چت را وارد کن", Toast.LENGTH_LONG).show()
             return false
         }
-        getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE).edit()
-            .putString(Constants.KEY_BALE_TOKEN, token)
-            .putString(Constants.KEY_BALE_CHAT_ID, chatId)
-            .apply()
-        if (showToast) Toast.makeText(this, "تنظیمات روی همین گوشی ذخیره شد", Toast.LENGTH_SHORT).show()
-        statusText.text = "تنظیمات بله ذخیره شد"
+        prefs.edit().putString(Constants.KEY_BALE_TOKEN, token.trim())
+            .putString(Constants.KEY_BALE_CHAT_ID, chatId.trim()).apply()
+        Toast.makeText(this, "تنظیمات روی گوشی ذخیره شد", Toast.LENGTH_SHORT).show()
         return true
     }
 
+    private fun toggleForwarding() {
+        if (prefs.getBoolean(Constants.KEY_AUTO_FORWARD, false)) {
+            prefs.edit().putBoolean(Constants.KEY_AUTO_FORWARD, false).apply()
+            statusText.text = "ارسال خودکار خاموش شد"
+        } else showSettings()
+    }
+
+    private fun enableForwarding() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECEIVE_SMS), REQUEST_SMS_PERMISSION)
+            return
+        }
+        if (prefs.getString(Constants.KEY_BALE_TOKEN, "").isNullOrBlank() ||
+            prefs.getString(Constants.KEY_BALE_CHAT_ID, "").isNullOrBlank()) {
+            showSettings()
+            return
+        }
+        if (!prefs.getBoolean(Constants.KEY_FORWARD_CONSENT, false)) {
+            AlertDialog.Builder(this)
+                .setTitle("تأیید ارسال خودکار")
+                .setMessage("با روشن‌کردن این قابلیت، متن پیامک‌های جدید این گوشی به ربات بله و چت تنظیم‌شده ارسال می‌شود.")
+                .setNegativeButton("لغو", null)
+                .setPositiveButton("تأیید و فعال‌سازی") { _, _ ->
+                    prefs.edit().putBoolean(Constants.KEY_FORWARD_CONSENT, true)
+                        .putBoolean(Constants.KEY_AUTO_FORWARD, true).apply()
+                    statusText.text = "پیانو آماده • ارسال خودکار فعال"
+                }.show()
+        } else {
+            prefs.edit().putBoolean(Constants.KEY_AUTO_FORWARD, true).apply()
+            statusText.text = "پیانو آماده • ارسال خودکار فعال"
+        }
+    }
+
+    private fun maybeEnableForwardingAfterPermission() {
+        if (prefs.getBoolean(Constants.KEY_FORWARD_CONSENT, false) &&
+            !prefs.getString(Constants.KEY_BALE_TOKEN, "").isNullOrBlank() &&
+            !prefs.getString(Constants.KEY_BALE_CHAT_ID, "").isNullOrBlank()) {
+            prefs.edit().putBoolean(Constants.KEY_AUTO_FORWARD, true).apply()
+            statusText.text = "پیانو آماده • ارسال خودکار فعال"
+        }
+    }
+
+    private fun showVolume() {
+        val seek = SeekBar(this).apply { max = 100; progress = volume }
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 20, 40, 4)
+            addView(seek)
+        }
+        AlertDialog.Builder(this).setTitle("تنظیم صدا").setView(box)
+            .setPositiveButton("انجام شد") { _, _ ->
+                volume = seek.progress.coerceAtLeast(1)
+                toneGenerator?.release()
+                toneGenerator = ToneGenerator(AudioManager.STREAM_MUSIC, volume)
+            }.show()
+    }
+
     private fun testBaleConnection() {
-        if (!saveSettings(showToast = false)) return
-        statusText.text = "در حال بررسی اتصال به بله…"
-        findViewById<Button>(R.id.testButton).isEnabled = false
-        BaleApi.sendMessage(this, "🎹 پیام آزمایشی Piano SMS") { ok, error ->
+        statusText.text = "در حال ارسال پیام آزمایشی…"
+        BaleApi.sendMessage(this, "🎹 اتصال پیانوی شما به بله برقرار است.") { ok, error ->
             runOnUiThread {
-                findViewById<Button>(R.id.testButton).isEnabled = true
-                statusText.text = if (ok) "اتصال موفق بود؛ پیام آزمایشی ارسال شد" else "ارسال ناموفق: ${error ?: "خطای نامشخص"}"
+                statusText.text = if (ok) "اتصال بله موفق بود" else "خطا در اتصال: ${error ?: "نامشخص"}"
                 Toast.makeText(this, statusText.text, Toast.LENGTH_LONG).show()
             }
         }
     }
 
-    private fun pickContactWithPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
-            openContactPicker()
-        } else {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_CONTACTS), REQUEST_CONTACTS_PERMISSION)
-        }
-    }
-
-    private fun openContactPicker() {
-        try {
-            startActivityForResult(
-                Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI),
-                PICK_CONTACT
-            )
-        } catch (_: Exception) {
-            Toast.makeText(this, "برنامهٔ مخاطبین در دسترس نیست", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    @Deprecated("Retained for compatibility with the current project setup")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != PICK_CONTACT || resultCode != RESULT_OK) return
-        val uri: Uri = data?.data ?: return
-        var cursor: Cursor? = null
-        try {
-            cursor = contentResolver.query(
-                uri,
-                arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.NUMBER),
-                null, null, null
-            )
-            if (cursor != null && cursor.moveToFirst()) {
-                selectedName = cursor.getString(0).orEmpty().ifBlank { "مخاطب" }
-                selectedPhone = cursor.getString(1).orEmpty()
-                selectedContactText.text = "مخاطب انتخاب‌شده\n$selectedName\n$selectedPhone"
-            } else {
-                Toast.makeText(this, "شماره‌ای برای این مخاطب پیدا نشد", Toast.LENGTH_LONG).show()
-            }
-        } catch (_: Exception) {
-            Toast.makeText(this, "خواندن اطلاعات مخاطب ممکن نشد", Toast.LENGTH_LONG).show()
-        } finally {
-            cursor?.close()
-        }
-    }
-
-    private fun shareMessage() {
-        if (selectedPhone.isBlank()) {
-            Toast.makeText(this, "اول یک مخاطب انتخاب کن", Toast.LENGTH_LONG).show()
-            return
-        }
-        val message = messageInput.text.toString().trim()
-        if (message.isBlank()) {
-            messageInput.error = "متن پیام را بنویس"
-            messageInput.requestFocus()
-            return
-        }
-        val sendIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, message)
-        }
-        startActivity(Intent.createChooser(sendIntent, "ارسال پیام برای $selectedName"))
-        statusText.text = "متن آماده است؛ در بله گفت‌وگوی $selectedName را انتخاب و ارسال را تأیید کن"
-    }
-
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            REQUEST_SMS_PERMISSION -> {
-                val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
-                if (!granted) {
-                    autoForwardSwitch.isChecked = false
-                    statusText.text = "مجوز پیامک داده نشد؛ ارسال خودکار خاموش است"
-                } else {
-                    statusText.text = "مجوز پیامک داده شد؛ ارسال خودکار را فقط در صورت نیاز روشن کن"
-                }
-            }
-            REQUEST_CONTACTS_PERMISSION -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) openContactPicker()
-                else Toast.makeText(this, "برای انتخاب مخاطب باید مجوز را بدهی", Toast.LENGTH_LONG).show()
-            }
+        if (requestCode == REQUEST_SMS_PERMISSION) {
+            val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+            if (granted) {
+                statusText.text = "مجوز دریافت شد؛ تنظیمات بله را باز کن"
+                maybeEnableForwardingAfterPermission()
+            } else statusText.text = "مجوز داده نشد؛ ارسال خودکار خاموش است"
         }
     }
 
